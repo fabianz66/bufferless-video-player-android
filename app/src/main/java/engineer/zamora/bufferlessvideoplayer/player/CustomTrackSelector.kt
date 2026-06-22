@@ -2,20 +2,23 @@ package engineer.zamora.bufferlessvideoplayer.player
 
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import androidx.media3.exoplayer.trackselection.ExoTrackSelection
 
+/**
+ * This class selects the allowed tracks. Which tracks the ABR logic can pick from.
+ */
 @UnstableApi
-class CustomTrackSelector(context: android.content.Context) : DefaultTrackSelector(context) {
+class CustomTrackSelector(
+    context: android.content.Context,
+    trackSelectionFactory: ExoTrackSelection.Factory
+) : DefaultTrackSelector(context, trackSelectionFactory) {
     init {
-        // Encapsulate all your "Business Logic" for track picking here
         this.parameters = buildUponParameters()
             .setPreferredVideoMimeTypes(
                 "video/av01",   // AV1
                 "video/x-vnd.on2.vp9", // VP9
                 "video/avc",    // H.264
             )
-            // You can also add other encapsulated rules here
-//            .setForceLowestBitrate(false)
-            .setForceLowestBitrate(true)
             .setAllowVideoNonSeamlessAdaptiveness(true)
             .build()
     }
