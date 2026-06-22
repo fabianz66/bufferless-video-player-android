@@ -26,6 +26,7 @@ fun StatsForNerds(stats: PlaybackStats) {
         StatRow("Codec", stats.codec)
         StatRow("Decoder", stats.decoderName)
         StatRow("Bitrate", stats.bitrate)
+        StatRow("Bandwidth", stats.bandwidth)
         StatRow("Dropped", "${stats.droppedFrames}", if (stats.droppedFrames > 0) Color.Red else Color.White)
     }
 }

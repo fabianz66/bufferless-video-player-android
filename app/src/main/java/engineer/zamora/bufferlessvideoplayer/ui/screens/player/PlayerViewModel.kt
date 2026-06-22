@@ -5,26 +5,32 @@ import androidx.annotation.OptIn
 import androidx.lifecycle.AndroidViewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
+import engineer.zamora.bufferlessvideoplayer.player.CustomLogger
+import engineer.zamora.bufferlessvideoplayer.player.CustomLoggerImpl
 import engineer.zamora.bufferlessvideoplayer.player.CustomPlayerBuilder
 
 @UnstableApi
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
 
     @OptIn(UnstableApi::class)
-    private val playerBuilder = CustomPlayerBuilder(application)
+    val customLogger: CustomLogger = CustomLoggerImpl("VideoPlayer")
+
+    @OptIn(UnstableApi::class)
+    private val playerBuilder = CustomPlayerBuilder(application, customLogger)
 
     @OptIn(UnstableApi::class)
     val playerDebugger = playerBuilder.playerDebugger
 
-    // The player instance is created once and kept here
     @OptIn(UnstableApi::class)
     val player = playerBuilder.build()
 
     fun playVideo(url: String) {
         val mediaItem = MediaItem.fromUri(url)
-        player.setMediaItem(mediaItem)
-        player.prepare()
-        player.playWhenReady = true
+        player.apply {
+            setMediaItem(mediaItem)
+            prepare()
+            play()
+        }
     }
 
     override fun onCleared() {

@@ -8,7 +8,8 @@ import androidx.media3.exoplayer.upstream.BandwidthMeter
 
 @UnstableApi
 class CustomTrackSelectionFactory(
-    private val bandwidthMeter: BandwidthMeter
+    private val bandwidthMeter: BandwidthMeter,
+    private val logger: CustomLogger? = null
 ) : ExoTrackSelection.Factory {
     override fun createTrackSelections(
         definitions: Array<out ExoTrackSelection.Definition?>,
@@ -18,7 +19,7 @@ class CustomTrackSelectionFactory(
     ): Array<ExoTrackSelection?> {
         return definitions.map { definition ->
             if (definition != null) {
-                CustomTrackSelection(definition.group, definition.tracks, bandwidthMeter)
+                CustomTrackSelection(definition.group, definition.tracks, bandwidthMeter, logger)
             } else null
         }.toTypedArray()
     }

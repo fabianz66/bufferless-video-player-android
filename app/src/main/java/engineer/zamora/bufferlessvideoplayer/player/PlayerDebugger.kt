@@ -1,9 +1,9 @@
 package engineer.zamora.bufferlessvideoplayer.player
 
-import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.Format
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
@@ -14,13 +14,12 @@ import androidx.media3.exoplayer.source.MediaLoadData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 data class PlaybackStats(
     val resolution: String = "Unknown",
     val bitrate: String = "0 bps",
+    val bandwidth: String = "0 bps",
     val codec: String = "Unknown",
     val playerState: String = "IDLE",
     val frameRate: String = "0 fps",
@@ -29,28 +28,12 @@ data class PlaybackStats(
 )
 
 @UnstableApi
-class PlayerDebugger : Player.Listener, AnalyticsListener {
-    private val TAG = "PlayerDebugger"
-    private val timeFormatter = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
-
+class PlayerDebugger(
+    private val logger: CustomLogger
+) : Player.Listener, AnalyticsListener {
     private var attachedPlayer: ExoPlayer? = null
-
-    private val _logs = MutableStateFlow<List<String>>(emptyList())
     private val _currentStats = MutableStateFlow(PlaybackStats())
-    val logs: StateFlow<List<String>> = _logs.asStateFlow()
     val currentStats: StateFlow<PlaybackStats> = _currentStats.asStateFlow()
-
-    private fun log(message: String) {
-        val timestamp = timeFormatter.format(Date())
-        val formattedMessage = "[$timestamp] $message"
-        Log.d(TAG, message)
-        val currentLogs = _logs.value.toMutableList()
-        currentLogs.add(0, formattedMessage) // Newest logs at the top
-        if (currentLogs.size > 100) {
-            currentLogs.removeAt(currentLogs.size - 1)
-        }
-        _logs.value = currentLogs
-    }
 
     fun startDebugging(exoPlayer: ExoPlayer) {
         attachedPlayer = exoPlayer
@@ -79,23 +62,12 @@ class PlayerDebugger : Player.Listener, AnalyticsListener {
         updatePlayerState()
     }
 
-    private fun updatePlayerState() {
-        val player = attachedPlayer ?: return
-        val playbackState = player.playbackState
-        val playWhenReady = player.playWhenReady
+    override fun onPlayerError(eventTime: AnalyticsListener.EventTime, error: PlaybackException) {
+        log("Error: ${error.message}")
+    }
 
-        val stateString = when (playbackState) {
-            Player.STATE_IDLE -> "IDLE"
-            Player.STATE_BUFFERING -> "BUFFERING"
-            Player.STATE_READY -> if (playWhenReady) "PLAYING" else "PAUSED"
-            Player.STATE_ENDED -> "ENDED"
-            else -> "UNKNOWN"
-        }
-        
-        if (stateString != _currentStats.value.playerState) {
-            log("State: $stateString")
-            _currentStats.value = _currentStats.value.copy(playerState = stateString)
-        }
+    override fun onPlayerError(error: PlaybackException) {
+        log("Error: ${error.message}")
     }
 
     override fun onTracksChanged(tracks: Tracks) {
@@ -183,5 +155,43 @@ class PlayerDebugger : Player.Listener, AnalyticsListener {
         mediaLoadData: MediaLoadData
     ) {
         log("Download Completed: ${loadEventInfo.uri.lastPathSegment ?: "unknown"} (${loadEventInfo.bytesLoaded} bytes in ${loadEventInfo.loadDurationMs}ms)")
+    }
+
+    override fun onBandwidthEstimate(
+        eventTime: AnalyticsListener.EventTime,
+        totalLoadTimeMs: Int,
+        totalBytesLoaded: Long,
+        bitrateEstimate: Long
+    ) {
+        val bandwidthKbps = bitrateEstimate / 1000
+        val bandwidthString = if (bandwidthKbps > 1000) {
+            String.format(Locale.getDefault(), "%.2f Mbps", bandwidthKbps / 1000.0)
+        } else {
+            "$bandwidthKbps kbps"
+        }
+        _currentStats.value = _currentStats.value.copy(bandwidth = bandwidthString)
+    }
+
+    private fun updatePlayerState() {
+        val player = attachedPlayer ?: return
+        val playbackState = player.playbackState
+        val playWhenReady = player.playWhenReady
+
+        val stateString = when (playbackState) {
+            Player.STATE_IDLE -> "IDLE"
+            Player.STATE_BUFFERING -> "BUFFERING"
+            Player.STATE_READY -> if (playWhenReady) "PLAYING" else "PAUSED"
+            Player.STATE_ENDED -> "ENDED"
+            else -> "UNKNOWN"
+        }
+
+        if (stateString != _currentStats.value.playerState) {
+            log("State: $stateString")
+            _currentStats.value = _currentStats.value.copy(playerState = stateString)
+        }
+    }
+
+    private fun log(message: String) {
+        logger.log(message)
     }
 }

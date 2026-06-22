@@ -15,8 +15,9 @@ import androidx.media3.exoplayer.upstream.BandwidthMeter
 class CustomTrackSelection(
     group: TrackGroup,
     tracks: IntArray,
-    private val bandwidthMeter: BandwidthMeter
-) : BaseTrackSelection(group, tracks) {
+    private val bandwidthMeter: BandwidthMeter,
+    private val logger: CustomLogger? = null
+) : BaseTrackSelection(group, *tracks) {
 
     private var selectedIndex = 0
     private var selectionReason = C.SELECTION_REASON_INITIAL
@@ -34,6 +35,9 @@ class CustomTrackSelection(
 
         // Example Logic: If buffer is low, force the lowest bitrate immediately
         if (bufferedDurationUs < 5_000_000) { // Less than 5 seconds
+            if (selectedIndex != 0) {
+                logger?.log("Low buffer (${bufferedDurationUs / 1000}ms). Switching to lowest bitrate.")
+            }
             selectedIndex = 0 // Pick the lowest bitrate track
             selectionReason = C.SELECTION_REASON_ADAPTIVE
         } else {

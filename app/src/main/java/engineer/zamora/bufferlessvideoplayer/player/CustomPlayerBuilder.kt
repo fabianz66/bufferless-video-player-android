@@ -6,12 +6,15 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 
 @UnstableApi
-class CustomPlayerBuilder(private val context: Context) {
+class CustomPlayerBuilder(
+    private val context: Context,
+    private val logger: CustomLogger
+) {
 
     private val bandwidthMeter = DefaultBandwidthMeter.getSingletonInstance(context)
 
     // 1. Create the ABR Factory
-    private val trackSelectionFactory = CustomTrackSelectionFactory(bandwidthMeter)
+    private val trackSelectionFactory = CustomTrackSelectionFactory(bandwidthMeter, logger)
 
     // 2. Create the Track Selector using our custom ABR factory
     private val trackSelector = CustomTrackSelector(context, trackSelectionFactory)
@@ -20,7 +23,7 @@ class CustomPlayerBuilder(private val context: Context) {
     private val loadControl = CustomLoadControl()
 
     // 4. Create the Debugger
-    val playerDebugger = PlayerDebugger()
+    val playerDebugger = PlayerDebugger(logger)
 
     fun build(): ExoPlayer {
         return ExoPlayer.Builder(context)

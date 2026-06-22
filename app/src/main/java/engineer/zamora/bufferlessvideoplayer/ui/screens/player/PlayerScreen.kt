@@ -19,7 +19,7 @@ import androidx.media3.ui.PlayerView
 
 @Composable
 fun PlayerScreen(url: String, viewModel: PlayerViewModel = viewModel()) {
-    val logs by viewModel.playerDebugger.logs.collectAsState()
+    val logs by viewModel.customLogger.logs.collectAsState()
     val stats by viewModel.playerDebugger.currentStats.collectAsState()
 
     // Tell the ViewModel to play the video when the screen first loads
