@@ -12,11 +12,33 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.source.MediaLoadData
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 class PlayerDebugger : Player.Listener, AnalyticsListener {
     private val TAG = "PlayerDebugger"
+    private val timeFormatter = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
+    private val _logs = MutableStateFlow<List<String>>(emptyList())
+    val logs: StateFlow<List<String>> = _logs.asStateFlow()
+    
+    private fun log(message: String) {
+        val timestamp = timeFormatter.format(Date())
+        val formattedMessage = "[$timestamp] $message"
+        Log.d(TAG, message)
+        val currentLogs = _logs.value.toMutableList()
+        currentLogs.add(0, formattedMessage) // Newest logs at the top
+        if (currentLogs.size > 100) {
+            currentLogs.removeAt(currentLogs.size - 1)
+        }
+        _logs.value = currentLogs
+    }
 
     fun startDebugging(exoPlayer: ExoPlayer) {
-
+        log("Debugging started")
         // 1. Monitor Tracks, Codecs, and Resolutions
         exoPlayer.addListener(this)
 
@@ -25,7 +47,7 @@ class PlayerDebugger : Player.Listener, AnalyticsListener {
     }
 
     override fun onTracksChanged(tracks: Tracks) {
-        Log.d(TAG, "Tracks Changed. Available Groups: ${tracks.groups.size}")
+        log("Tracks Changed. Groups: ${tracks.groups.size}")
         tracks.groups.forEachIndexed { index, group ->
             val type = when (group.type) {
                 C.TRACK_TYPE_AUDIO -> "Audio"
@@ -33,15 +55,10 @@ class PlayerDebugger : Player.Listener, AnalyticsListener {
                 C.TRACK_TYPE_VIDEO -> "Video"
                 else -> "Other (${group.type})"
             }
-            Log.d(TAG, "Group $index ($type):")
             for (i in 0 until group.length) {
                 val format: Format = group.getTrackFormat(i)
                 val isSelected = group.isTrackSelected(i)
-                Log.d(
-                    TAG, "  Track $i: ${format.width}x${format.height}, " +
-                            "Bitrate: ${format.bitrate}, Codec: ${format.sampleMimeType}, " +
-                            "Selected: $isSelected"
-                )
+                log("  $type track $i: ${format.width}x${format.height}, ${format.bitrate}bps, ${format.sampleMimeType}, selected=$isSelected")
             }
         }
     }
@@ -50,7 +67,7 @@ class PlayerDebugger : Player.Listener, AnalyticsListener {
         if (events.contains(Player.EVENT_TIMELINE_CHANGED)) {
             val manifest = player.currentManifest
             if (manifest != null) {
-                Log.d(TAG, "Manifest loaded: $manifest")
+                log("Manifest loaded")
             }
         }
     }
@@ -61,7 +78,7 @@ class PlayerDebugger : Player.Listener, AnalyticsListener {
         loadEventInfo: LoadEventInfo,
         mediaLoadData: MediaLoadData
     ) {
-        Log.d(TAG, "Download Started: ${loadEventInfo.uri}")
+        log("Download Started: ${loadEventInfo.uri.lastPathSegment ?: "unknown"}")
     }
 
     @OptIn(UnstableApi::class)
@@ -70,10 +87,6 @@ class PlayerDebugger : Player.Listener, AnalyticsListener {
         loadEventInfo: LoadEventInfo,
         mediaLoadData: MediaLoadData
     ) {
-        Log.d(
-            TAG, "Download Completed: ${loadEventInfo.uri}, " +
-                    "Bytes: ${loadEventInfo.bytesLoaded}, " +
-                    "Duration: ${loadEventInfo.loadDurationMs}ms"
-        )
+        log("Download Completed: ${loadEventInfo.uri.lastPathSegment ?: "unknown"} (${loadEventInfo.bytesLoaded} bytes in ${loadEventInfo.loadDurationMs}ms)")
     }
 }

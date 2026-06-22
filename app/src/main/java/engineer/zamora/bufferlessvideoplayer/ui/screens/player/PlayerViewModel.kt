@@ -20,7 +20,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val customLoadControl = CustomLoadControl()
 
     // Player debugger
-    private val playerDebugger = PlayerDebugger()
+    val playerDebugger = PlayerDebugger()
 
     // The player instance is created once and kept here
     @OptIn(UnstableApi::class)
