@@ -89,6 +89,9 @@ class PlayerDebugger(
                         videoCodec = format.sampleMimeType ?: "Unknown"
                         fps =
                             if (format.frameRate > 0) "${format.frameRate.toInt()} fps" else "Unknown"
+                        // Break after the first selected track to avoid overwriting with lower quality
+                        // in adaptive groups, or wait for onDownstreamFormatChanged for ABR updates.
+                        break
                     }
                 }
             }
@@ -186,6 +189,28 @@ class PlayerDebugger(
         mediaLoadData: MediaLoadData
     ) {
         logger.log("Chunk C: ${loadEventInfo.uri.lastPathSegment ?: "unknown"}", logCatOnly = true)
+    }
+
+    @OptIn(UnstableApi::class)
+    override fun onDownstreamFormatChanged(
+        eventTime: AnalyticsListener.EventTime,
+        mediaLoadData: MediaLoadData
+    ) {
+        val format = mediaLoadData.trackFormat ?: return
+        if (mediaLoadData.trackType == C.TRACK_TYPE_VIDEO) {
+            val videoRes = "${format.width}x${format.height}"
+            val videoBitrate = "${format.bitrate / 1000} kbps"
+            val videoCodec = format.sampleMimeType ?: "Unknown"
+            val fps = if (format.frameRate > 0) "${format.frameRate.toInt()} fps" else "Unknown"
+
+            _currentStats.value = _currentStats.value.copy(
+                resolution = videoRes,
+                bitrate = videoBitrate,
+                codec = videoCodec,
+                frameRate = fps
+            )
+            log("ABR Switch: $videoRes, $videoBitrate, $videoCodec")
+        }
     }
 
     override fun onBandwidthEstimate(

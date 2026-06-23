@@ -9,13 +9,6 @@ import androidx.media3.exoplayer.source.chunk.MediaChunkIterator
 import androidx.media3.exoplayer.trackselection.BaseTrackSelection
 import androidx.media3.exoplayer.upstream.BandwidthMeter
 
-fun Format.getPixelCount(): Int {
-    if (width == Format.NO_VALUE || height == Format.NO_VALUE) {
-        return 0 // Safe fallback for unknown manifest data
-    }
-    return width * height
-}
-
 /**
  * This class contains the ABR logic.
  */
@@ -69,7 +62,6 @@ class CustomTrackSelection(
         // Does load control consider available memory?
         // Can load control estimate memory per downloaded chunk?
 
-
         val currentBandwidth = bandwidthMeter.bitrateEstimate
 
         // For debugging lets create a list with all formats.
@@ -80,50 +72,26 @@ class CustomTrackSelection(
         logger?.log("ABR Formats: $formats")
 
         // Exclude formats with higher bitrate than current bandwidth.
-        val formatsLowerBps = formats.filter { it.bitrate < currentBandwidth }
+        // Use <= to include formats matching the bandwidth estimate.
+        val formatsLowerBps = formats.filter { it.bitrate <= currentBandwidth }
         logger?.log("ABR Formats With BW: $formatsLowerBps")
 
-        // Sort DESC by pixel count and then ASC by bitrate.
+        // Sort DESC by pixel count and then DESC by bitrate to get best quality.
         val sortedFormats = formatsLowerBps.sortedWith(
             compareByDescending<Format> { it.pixelCount }
                 .thenByDescending { it.bitrate }
         )
         logger?.log("ABR Sorted Formats: $sortedFormats")
 
-        val selectedFormat = sortedFormats.first()
+        // Fallback to the lowest bitrate format if no formats are below bandwidth estimate.
+        val selectedFormat = sortedFormats.firstOrNull() ?: formats.minBy { it.bitrate }
         selectedIndex = indexOf(selectedFormat)
         selectionReason = C.SELECTION_REASON_ADAPTIVE
 
         logger?.log("ABR Selected Format: $selectedFormat")
-//
-//        logger?.log(
-//            "ABR Update | P: ${playbackPositionUs / 1000}ms | " +
-//                    "R: ${bufferedDurationUs / 1000}ms | BW: ${currentBandwidth}bps | " +
-//                    "G: ${group.id} | T: [$trackInfo]", logCatOnly = true
-//        )
-
-//        logger?.log(
-//            "ABR: H: ${f.height} BW: $availableBandwidth FBW: ${f.bitrate}",
-//            logCatOnly = true
-//        )
-
-        // Picks the highest quality format based on current bandwidth.
     }
 
     override fun getSelectedIndex(): Int = selectedIndex
     override fun getSelectionReason(): Int = selectionReason
     override fun getSelectionData(): Any? = null
-
-    private fun selectHighestBitrateForBandwidth(availableBandwidth: Long) {
-        // Formats are sorted by decreasing bandwidth. 0: Highest, Len-1: Lowest.
-        for (i in 0 until length) {
-            val format = getFormat(i)
-            if (format.bitrate <= availableBandwidth) {
-                selectedIndex = i
-                selectionReason = C.SELECTION_REASON_ADAPTIVE
-                logger?.log("ABR Selected [${type}]: [${format.codecs}] [${format.bitrate}] []")
-                break
-            }
-        }
-    }
 }
