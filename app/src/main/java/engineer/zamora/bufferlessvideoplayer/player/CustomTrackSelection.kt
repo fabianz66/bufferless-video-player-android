@@ -33,6 +33,17 @@ class CustomTrackSelection(
 
         val currentBandwidth = bandwidthMeter.bitrateEstimate
 
+        val trackInfo = (0 until length).joinToString(", ") { i ->
+            val f = getFormat(i)
+            "Track: ${f.codecs}[${f.height}]"
+        }
+
+        logger?.log(
+            "ABR Update | P: ${playbackPositionUs / 1000}ms | " +
+                    "R: ${bufferedDurationUs / 1000}ms | BW: ${currentBandwidth}bps | " +
+                    "G: ${group.id} | T: [$trackInfo]"
+        )
+
         // Example Logic: If buffer is low, force the lowest bitrate immediately
         if (bufferedDurationUs < 5_000_000) { // Less than 5 seconds
             if (selectedIndex != 0) {

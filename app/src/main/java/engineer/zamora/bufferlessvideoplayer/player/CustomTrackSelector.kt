@@ -14,11 +14,12 @@ class CustomTrackSelector(
 ) : DefaultTrackSelector(context, trackSelectionFactory) {
     init {
         this.parameters = buildUponParameters()
-            .setPreferredVideoMimeTypes(
-                "video/av01",   // AV1
-                "video/x-vnd.on2.vp9", // VP9
-                "video/avc",    // H.264
-            )
+//            .setPreferredVideoMimeTypes(
+//                "video/av01",   // AV1
+//                "video/x-vnd.on2.vp9", // VP9
+//                "video/avc",    // H.264
+//            )
+            .setAllowVideoMixedMimeTypeAdaptiveness(true)
             .setAllowVideoNonSeamlessAdaptiveness(true)
             .build()
     }

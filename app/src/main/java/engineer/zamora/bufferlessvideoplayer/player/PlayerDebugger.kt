@@ -27,7 +27,8 @@ data class PlaybackStats(
     val playerState: String = "IDLE",
     val frameRate: String = "0 fps",
     val decoderName: String = "Unknown",
-    val droppedFrames: Int = 0
+    val droppedFrames: Int = 0,
+    val bufferDuration: String = "0s"
 )
 
 /**
@@ -128,14 +129,19 @@ class PlayerDebugger(
      */
     @OptIn(UnstableApi::class)
     override fun onEvents(player: Player, events: Player.Events) {
-        // Monitor dropped frames periodically
+        // Monitor dropped frames and buffer periodically
         attachedPlayer?.let { exo ->
             val counters = exo.videoDecoderCounters
-            if (counters != null) {
-                val dropped = counters.droppedBufferCount
-                if (dropped != _currentStats.value.droppedFrames) {
-                    _currentStats.value = _currentStats.value.copy(droppedFrames = dropped)
-                }
+            val dropped = counters?.droppedBufferCount ?: 0
+
+            val bufferMs = (exo.bufferedPosition - exo.currentPosition).coerceAtLeast(0)
+            val bufferSeconds = String.format(Locale.getDefault(), "%.1fs", bufferMs / 1000.0)
+
+            if (dropped != _currentStats.value.droppedFrames || bufferSeconds != _currentStats.value.bufferDuration) {
+                _currentStats.value = _currentStats.value.copy(
+                    droppedFrames = dropped,
+                    bufferDuration = bufferSeconds
+                )
             }
         }
 
@@ -170,7 +176,7 @@ class PlayerDebugger(
         loadEventInfo: LoadEventInfo,
         mediaLoadData: MediaLoadData
     ) {
-        log("Download Started: ${loadEventInfo.uri.lastPathSegment ?: "unknown"}")
+        log("Chunk S: ${loadEventInfo.uri.lastPathSegment ?: "unknown"}")
     }
 
     @OptIn(UnstableApi::class)
@@ -179,7 +185,7 @@ class PlayerDebugger(
         loadEventInfo: LoadEventInfo,
         mediaLoadData: MediaLoadData
     ) {
-        log("Download Completed: ${loadEventInfo.uri.lastPathSegment ?: "unknown"} (${loadEventInfo.bytesLoaded} bytes in ${loadEventInfo.loadDurationMs}ms)")
+        log("Chunk C: ${loadEventInfo.uri.lastPathSegment ?: "unknown"}")
     }
 
     override fun onBandwidthEstimate(

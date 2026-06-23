@@ -31,6 +31,7 @@ fun StatsForNerds(stats: PlaybackStats) {
         StatRow("Decoder", stats.decoderName)
         StatRow("Bitrate", stats.bitrate)
         StatRow("Bandwidth", stats.bandwidth)
+        StatRow("Buffer", stats.bufferDuration)
         StatRow(
             "Dropped",
             "${stats.droppedFrames}",
