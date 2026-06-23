@@ -6,6 +6,8 @@ import androidx.media3.exoplayer.trackselection.ExoTrackSelection
 
 /**
  * This class selects the allowed tracks, i.e. what tracks the ABR logic can pick from.
+ *
+ * TODO: add format constraints. E.g. user manually selected 1080p.
  */
 @UnstableApi
 class CustomTrackSelector(

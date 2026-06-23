@@ -21,8 +21,8 @@ class CustomLoggerImpl(
     override val logs: StateFlow<List<String>> = _logs
 
     override fun log(message: String, logCatOnly: Boolean) {
+        Log.d(tag, message)
         if (logCatOnly) {
-            Log.d(tag, message)
             return
         }
         val timestamp = timeFormatter.format(Date())
